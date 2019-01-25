@@ -1,0 +1,67 @@
+{
+  "name": "express-vue-admin",
+  "version": "0.1.0",
+  "description": "express-vue-admin",
+  "main": "server.js",
+  "files": [
+    "server.js",
+    "util.js",
+    "config",
+    "controller",
+    "database",
+    "middleware",
+    "route"
+  ],
+  "scripts": {
+    "test": "mocha",
+    "start": "node server.js",
+    "lint": "eslint *.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jarontai/express-vue-admin.git"
+  },
+  "keywords": [
+    "express",
+    "vue",
+    "admin"
+  ],
+  "author": {
+    "name": "Jaron Tai",
+    "email": "jaroncn@gmail.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jarontai/express-vue-admin/issues"
+  },
+  "homepage": "https://github.com/jarontai/express-vue-admin#readme",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "body-parser": "^1.17.2",
+    "connect-redis": "^3.3.0",
+    "credential": "^2.0.0",
+    "dotenv": "^4.0.0",
+    "express": "^4.16.3",
+    "express-session": "^1.15.3",
+    "fs-readdir-recursive": "^1.0.0",
+    "joi": "^10.6.0",
+    "lodash": "^4.17.5",
+    "moment": "^2.22.0",
+    "morgan": "^1.8.2",
+    "mysql2": "^1.3.5",
+    "sequelize": "^4.4.2",
+    "sequelize-cli": "^3.2.0"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "chai-http": "^4.0.0",
+    "eslint": "^3.19.0",
+    "eslint-config-prettier": "^3.3.0",
+    "eslint-plugin-node": "^5.1.0",
+    "mocha": "^5.2.0",
+    "prettier": "^1.15.3"
+  },
+  "engines": {
+    "node": ">=6.0.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+	"root": true,
+	"extends": ["eslint:recommended", "plugin:node/recommended", "plugin:prettier/recommended"],
+	"plugins": ["node"],
+	"rules": {
+		"node/exports-style": ["error", "module.exports"],
+		"node/no-extraneous-require": 0,
+		"no-console": 0
+	},
+	"parserOptions": {
+		"ecmaVersion": 2017
+	},
+	"env": {
+		"es6": true,
+		"node": true,
+		"mocha": true
+	}
+}
