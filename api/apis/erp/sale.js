@@ -70,6 +70,11 @@ module.exports = defAPI('SaleOrder', [
 					Math.round(
 						desc.getItems().reduce((sum, item) => sum + item.model.count * item.model.price, 0) * 100
 					) / 100
+			},
+			create(model, desc, ctx) {
+				const consumer = desc.getConsumer().model
+				if (!consumer.disableScore) return consumer.update({ score: model.score })
+				else model.score = 0
 			}
 		}
 	),

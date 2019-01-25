@@ -199,7 +199,7 @@ Object.assign(defAPI, {
 						const op = conditionOPs[c.op]
 						const key = /\./.test(c.key) ? `$${c.key}$` : c.key
 						if (!op) throw new Error('Invalid Condition')
-						where[key] = { [op]: /like/i.test(c.op) ?`%${c.value}%`: c.value }
+						where[key] = { [op]: /like/i.test(c.op) ? `%${c.value}%` : c.value }
 					})
 					params.where = where
 				}
@@ -457,13 +457,12 @@ class Model {
 	beforeSave() {
 		const { model, rule, param, ctx } = this
 
-		rule.save && rule.save(model, this, ctx)
+		let p = Promise.resolve(rule.save && rule.save(model, this, ctx))
 
 		if (this.id) {
-			rule.update && rule.update(model, this, ctx)
-		} else {
-			rule.create && rule.create(model, this, ctx)
+			return p.then(() => Promise.resolve(rule.update && rule.update(model, this, ctx)))
 		}
+		return p.then(() => Promise.resolve(rule.create && rule.create(model, this, ctx)))
 	}
 	save() {
 		console.log(chalk.green(`save ${this.rule.modelName}: ${this.model.id}`))
@@ -497,16 +496,19 @@ class SaveContext {
 		const { saves, dels, ctx } = this
 		return this.load().then(() => {
 			saves.forEach(m => m.margeParam())
-			saves.forEach(m => m.beforeSave())
 
 			return ctx.sequelize.transaction(transaction =>
-				Promise.all(
-					_.map(dels, (ids, modelName) => {
-						console.log(chalk.green(`delete models[${modelName}]: ${ids.join(', ')}`))
+				Promise.all(saves.map(m => m.beforeSave()))
+					.then(() =>
+						Promise.all(
+							_.map(dels, (ids, modelName) => {
+								console.log(chalk.green(`delete models[${modelName}]: ${ids.join(', ')}`))
 
-						return defAPI.delModelByIds(getModel(modelName, ctx), ids)
-					}).concat(saves.map(m => m.save()))
-				).then(() => Promise.all(saves.map(m => m.saveRels())))
+								return defAPI.delModelByIds(getModel(modelName, ctx), ids)
+							}).concat(saves.map(m => m.save()))
+						)
+					)
+					.then(() => Promise.all(saves.map(m => m.saveRels())))
 			)
 		})
 	}
