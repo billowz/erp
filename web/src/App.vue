@@ -176,7 +176,16 @@ fieldset[disabled] .ivu-input {
 	color: #000;
 }
 .ivu-select-disabled .ivu-select-selection {
-    background-color: #f3f3f3;
-    color: #000;
+	background-color: #f3f3f3;
+	color: #000;
+}
+.ivu-input-number {
+	width: 100%;
+}
+.ivu-input-number-input {
+	color: #666;
+}
+.ivu-input-number-input[disabled] {
+	color: #000;
 }
 </style>

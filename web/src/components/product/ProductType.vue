@@ -30,6 +30,7 @@
           <Input
             v-model="editData.comment"
             type="textarea"
+            :rows="8"
           ></Input>
         </Form-item>
       </Form>
@@ -53,14 +54,16 @@ export default {
 				comment: []
 			},
 			tableHeader: [
-			{
-				title: '名称',
-				key: 'name'
-			},
-			{
-				title: '备注',
-				key: 'comment'
-			}
+				{
+					title: '名称',
+					key: 'name'
+				},
+				{
+					title: '备注',
+					key: 'comment',
+          ellipsis: true,
+          tooltip: true
+				}
 			]
 		}
 	},

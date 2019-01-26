@@ -49,40 +49,43 @@
             v-model="editData.unit"
             filterable
           >
+            <Option value="瓶">瓶</Option>
             <Option value="件">件</Option>
             <Option value="盒">盒</Option>
             <Option value="套">套</Option>
             <Option value="包">包</Option>
+            <Option value="箱">箱</Option>
           </Select>
         </Form-item>
         <Form-item
           label="库存"
           prop="stock"
         >
-          <Input
+          <InputNumber
             v-model="editData.stock"
-            :number="true"
+            :min="0"
+            :precision="0"
           >
-          <span slot="append">{{editData.unit}}</span>
-          </Input>
+            <span slot="append">{{editData.unit}}</span>
+          </InputNumber>
         </Form-item>
         <Form-item
           label="零售价"
           prop="price"
         >
-          <Input
+          <InputNumber
             v-model="editData.price"
-            :number="true"
-          ></Input>
+            :min="0"
+          ></InputNumber>
         </Form-item>
         <Form-item
           label="进价"
           prop="purchasePrice"
         >
-          <Input
+          <InputNumber
             v-model="editData.purchasePrice"
-            :number="true"
-          ></Input>
+            :min="0"
+          ></InputNumber>
         </Form-item>
         <Form-item
           label="备注"
@@ -123,8 +126,8 @@ export default {
 					{
 						required: true,
 						type: 'number',
-						min: 0.01,
-						message: `请输入${title}零售价 (>0.01)`,
+						min: 0,
+						message: `请输入${title}零售价`,
 						trigger: 'blur'
 					}
 				],
@@ -132,8 +135,8 @@ export default {
 					{
 						required: true,
 						type: 'number',
-						min: 0.01,
-						message: `请输入${title}进价 (>0.01)`,
+						min: 0,
+						message: `请输入${title}进价`,
 						trigger: 'blur'
 					},
 					{
@@ -151,7 +154,8 @@ export default {
 				},
 				{
 					title: '编码',
-					key: 'code'
+					key: 'code',
+					align: 'right'
 				},
 				{
 					title: '分类',
@@ -159,19 +163,24 @@ export default {
 				},
 				{
 					title: '单位',
-					key: 'unit'
+					key: 'unit',
+					align: 'center'
 				},
 				{
 					title: '库存',
-					key: 'stock'
+					key: 'stock',
+					type: 'number',
+					digits: 0
 				},
 				{
 					title: '零售价',
-					key: 'price'
+					key: 'price',
+					type: 'number'
 				},
 				{
 					title: '进价',
-					key: 'purchasePrice'
+					key: 'purchasePrice',
+					type: 'number'
 				}
 			]
 		}

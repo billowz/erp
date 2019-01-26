@@ -19,7 +19,7 @@
         :rules="editRule"
         :label-width="80"
         class="scroll"
-        style="height: 450px;overflow-y: auto; padding:10px;"
+        style="padding:10px;"
       >
         <Form-item
           label="客户"
@@ -45,23 +45,24 @@
             label="折扣"
             prop="discount"
           >
-            <Input
+            <InputNumber
               v-model="editData.discount"
-              :number="true"
+              :min="0"
+              :step="0.1"
               @on-change="updateDiscount"
             >
-            <span slot="append">折</span>
-            </Input>
+              <span slot="append">折</span>
+            </InputNumber>
           </Form-item>
           </Col>
           <Col span="11">
           <Form-item label="折扣价">
-            <Input
+            <InputNumber
               disabled
               :value="calcPayPrice()"
             >
-            <span slot="prepend">￥</span>
-            </Input>
+              <span slot="prepend">￥</span>
+            </InputNumber>
           </Form-item>
           </Col>
         </Row>
@@ -72,11 +73,11 @@
             label="总金额"
             prop="price"
           >
-            <Input
+            <InputNumber
               v-model="editData.price"
               disabled
             >
-            <span slot="prepend">￥</span></Input>
+              <span slot="prepend">￥</span></InputNumber>
           </Form-item>
           </Col>
           <Col span="11">
@@ -84,14 +85,14 @@
             label="优惠金额"
             prop="discountPrice"
           >
-            <Input
+            <InputNumber
               v-model="editData.discountPrice"
-              :number="true"
+              :min="0"
               @on-change="updateDiscount"
               :disabled="!!editData.id"
             >
-            <span slot="prepend">￥</span>
-            </Input>
+              <span slot="prepend">￥</span>
+            </InputNumber>
           </Form-item>
           </Col>
         </Row>
@@ -102,14 +103,14 @@
             label="支付金额"
             prop="pay"
           >
-            <Input
+            <InputNumber
               v-model="editData.pay"
-              :number="true"
+              :min="0"
               @on-change="updatePay"
             >
-            <span slot="prepend">￥</span>
-            <span slot="append">{{editData.payType}}</span>
-            </Input>
+              <span slot="prepend">￥</span>
+              <span slot="append">{{editData.payType}}</span>
+            </InputNumber>
           </Form-item>
 
           </Col>
@@ -134,12 +135,12 @@
           label="积分"
           prop="score"
         >
-          <Input
+          <InputNumber
             v-model="editData.score"
-            :number="true"
+            :min="0"
             :disabled="!!editData.id"
           >
-          </Input>
+          </InputNumber>
         </Form-item>
         <!--
         <Form-item
@@ -167,7 +168,9 @@
           <Col span="2">
           <Button
             type="text"
-            icon="plus"
+            icon="md-add"
+            shape="circle"
+            size="large"
             @click="addItem()"
           ></Button>
           </Col>
@@ -204,44 +207,47 @@
             span="4"
             style="padding-right:5px;"
           >
-          <Input
+          <InputNumber
             v-model="item.price"
-            :number="true"
+            :min="0"
             @on-change="updateItem(item)"
           >
-          <span slot="prepend">￥</span>
-          </Input>
+            <span slot="prepend">￥</span>
+          </InputNumber>
           </Col>
 
           <Col
             span="4"
             style="padding-right:5px;"
           >
-          <Input
+          <InputNumber
             v-model="item.count"
-            :number="true"
+            :min="1"
+            :precision="0"
             @on-change="updateItem(item)"
           >
-          <span slot="prepend">#</span>
-          </Input>
+            <span slot="prepend">#</span>
+          </InputNumber>
           </Col>
 
           <Col
             span="5"
             style="padding-right:5px;"
           >
-          <Input
+          <InputNumber
             disabled
             v-model="item.totalPrice"
           >
-          <span slot="prepend">￥</span>
-          </Input>
+            <span slot="prepend">￥</span>
+          </InputNumber>
           </Col>
 
           <Col span="2">
           <Button
             type="text"
-            icon="minus"
+            shape="circle"
+            icon="md-remove"
+            size="large"
             style="color:#c40000"
             @click="removeItem(index)"
           ></Button>
@@ -324,32 +330,37 @@ export default {
 			tableHeader: [
 				{
 					title: '客户',
-					key: 'consumer.name',
-					render: (h, params) => h('span', `${params.row.consumer.name}`)
+					key: 'consumer.name'
 				},
 				{
 					title: '客户电话',
-					key: 'consumer.phone'
+					key: 'consumer.phone',
+					align: 'right'
 				},
 				{
 					title: '会员卡号',
-					key: 'consumer.card'
+					key: 'consumer.card',
+					align: 'right'
 				},
 				{
 					title: '总金额',
-					key: 'price'
+					key: 'price',
+					type: 'number'
 				},
 				{
 					title: '积分',
-					key: 'score'
+					key: 'score',
+					type: 'number'
 				},
 				{
 					title: '支付金额',
-					key: 'pay'
+					key: 'pay',
+					type: 'number'
 				},
 				{
 					title: '优惠金额',
-					key: 'discountPrice'
+					key: 'discountPrice',
+					type: 'number'
 				},
 				{
 					title: '支付方式',
@@ -357,7 +368,8 @@ export default {
 				},
 				{
 					title: '折扣',
-					key: 'discount'
+					key: 'discount',
+					type: 'number'
 				}
 			]
 		}
@@ -434,7 +446,7 @@ export default {
 				product: undefined,
 				price: 0,
 				count: 1,
-				totalPrice: '-'
+				totalPrice: 0
 			})
 		},
 		removeItem(index) {
@@ -453,7 +465,7 @@ export default {
 		updateItem(item) {
 			item.price = Math.max(item.price, 0)
 			item.count = item.count < 0 || !isFinite(item.count) ? 1 : item.count
-			item.totalPrice = item.product ? money(item.price * item.count) : '-'
+			item.totalPrice = item.product ? money(item.price * item.count) : 0
 			this.updatePrice()
 		},
 		onEdit(data) {

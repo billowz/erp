@@ -13,8 +13,9 @@
         >
         <Button
           type="text"
-          size="small"
-          icon="plus"
+          size="large"
+          icon="md-add"
+          shape="circle"
           @click="edit()"
         ></Button>
         </Col>
@@ -33,6 +34,7 @@
         :size="size"
         :row-class-name="filterRowClass"
         stripe
+        @on-sort-change="doSort"
       >
       </Table>
       <Table
@@ -116,7 +118,7 @@ export default {
 
 		actions: { type: Array, default: () => ['edit', 'delete'] },
 
-		editorWidth: { type: Number, default: 500 },
+		editorWidth: { type: Number, default: 600 },
 		editorLoad: { type: Function },
 		editData: { type: Object },
 		onEdit: { type: Function },
@@ -128,45 +130,11 @@ export default {
 	},
 
 	data() {
-		const columns = this.parseColumns(this.header, {
-				edit: (h, params) =>
-					h(
-						'Button',
-						{
-							props: {
-								type: 'primary',
-								size: 'small'
-							},
-							style: {
-								marginRight: '5px'
-							},
-							on: {
-								click: () => {
-									this.edit(params.index)
-								}
-							}
-						},
-						'编辑'
-					),
-				delete: (h, params) =>
-					h(
-						'Button',
-						{
-							props: {
-								type: 'error',
-								size: 'small'
-							},
-							on: {
-								click: () => {
-									this.delete(params.index)
-								}
-							}
-						},
-						'删除'
-					)
-			}),
+		const columns = this.parseColumns(this.header),
 			condition = this.defaultCondition || {}
-
+		columns.forEach(col => {
+			if (!(col.key in condition)) condition[col.key] = undefined
+		})
 		return {
 			loading: false,
 			columns,
@@ -176,7 +144,7 @@ export default {
 			data: [],
 			currentPage: 1,
 			totalRows: 0,
-			filterRow: [condition],
+			filterRow: [Object.assign({}, condition)],
 
 			deleterTitle: '',
 			deleterModal: false,
@@ -191,7 +159,7 @@ export default {
 
 	methods: {
 		edit(index) {
-			const data = (index >= 0 && this.data[index]) || {}
+			const data = (index >= 0 && Object.assign({}, this.data[index])) || {}
 			this.onEdit(data)
 		},
 
@@ -208,13 +176,16 @@ export default {
 			this.currentPage = page
 			this.loading = true
 
+			this.filterRow = [Object.assign({}, condition)]
 			this.$http
 				.get(this.tableApi || this.api, {
 					params: {
 						offset: ((page || 1) - 1) * pageSize,
 						limit: pageSize,
 						sort: sort ? [sort] : [],
-						condition: Object.keys(condition).map(k => condition[k])
+						condition: Object.keys(condition)
+							.map(k => condition[k])
+							.filter(con => con && con.value !== undefined && con.value !== null)
 					}
 				})
 				.then(res => {
@@ -222,7 +193,14 @@ export default {
 					this.data = data.rows
 					this.totalRows = data.count
 
-					console.log(`loaded table[${this.title}] page: ${page}, sort`, sort, 'condition', condition)
+					console.log(
+						`loaded table[${this.title}] page: ${page}`,
+						this.data,
+						'sort',
+						sort,
+						'condition',
+						condition
+					)
 				})
 				.finally(() => {
 					this.loading = false
@@ -273,28 +251,80 @@ export default {
 			this.deleterModal = !!datas.length
 		},
 
-		parseColumns(columns, defaultActions) {
+		parseColumns(columns) {
+			const defaultActions = {
+				edit: (h, params) =>
+					h(
+						'Button',
+						{
+							props: {
+								type: 'primary',
+								size: 'small'
+							},
+							style: {
+								marginRight: '5px'
+							},
+							on: {
+								click: () => {
+									this.edit(params.index)
+								}
+							}
+						},
+						'编辑'
+					),
+				delete: (h, params) =>
+					h(
+						'Button',
+						{
+							props: {
+								type: 'error',
+								size: 'small'
+							},
+							on: {
+								click: () => {
+									this.delete(params.index)
+								}
+							}
+						},
+						'删除'
+					)
+			}
 			const actions = this.actions.map(a => {
 				if (typeof a === 'function') return a
 				if (!defaultActions[a]) throw new Error('unkown action: ' + a)
 				return defaultActions[a]
 			})
+			const defaultFormats = {
+				string: {
+					align: 'left'
+				},
+				number: {
+					align: 'right',
+					fmt(h, val, params) {
+						const digits = params.column.digits
+						return val === 0 || val ? val.toFixed(digits === 0 ? 0 : digits || 2) : ''
+					}
+				},
+				date: {
+					align: 'right',
+					fmt(h, val, params) {
+						return val && moment(val).format(params.column.format || 'YYYY-MM-DD')
+					}
+				}
+			}
 			return columns
 				.concat([
 					{
 						title: '创建时间',
 						key: 'createdAt',
-						render: (h, params) => h('span', moment(params.row.createdAt).format('YYYY-MM-DD HH:mm:ss'))
-					} /*
-					{
-						title: '更新时间',
-						key: 'updatedAt',
-						render: (h, params) => h('span', moment(params.row.updatedAt).format('YYYY-MM-DD HH:mm:ss'))
-          }, */,
+						type: 'date'
+					},
 					actions.length && {
 						title: '操作',
 						key: 'actions',
 						filter: false,
+						sortable: false,
+						align: 'center',
 						render: (h, params) => {
 							if (params.row.id) return h('div', actions.map(a => a(h, params)))
 						}
@@ -302,67 +332,159 @@ export default {
 				])
 				.filter(d => !!d)
 				.map(d => {
-					d.align = d.align || 'center'
+					if (!d.render) {
+						let fmt = d.fmt || d.type || 'string'
+
+						if (fmt && typeof fmt !== 'function') {
+							fmt = defaultFormats[fmt]
+							if (!fmt) throw new Error(`Invalid Format: ${d.fmt}`)
+							d.align = d.align || fmt.align
+							fmt = fmt.fmt
+						}
+						const path = d.key.split('.')
+						d.render = (h, params) => {
+							let o = params.row
+							for (let i = 0, l = path.length; i < l; i++) {
+								if (o) o = o[path[i]]
+								else break
+							}
+							return h('div', fmt ? fmt(h, o, params) : o)
+						}
+					}
+
 					d.sortable = d.sortable !== false
 					if (d.key === this.defaultSort.key) {
 						if (!d.sortable) throw new Error(`column ${d.key} is not sortable`)
 						d.sortType = this.defaultSort.order
 					}
-					if (typeof d.filter !== 'string' && d.filter !== false) d.filter = 'input'
-					if (!d.render) {
-						const path = d.key.split('.')
-						if (path.length > 1) {
-							d.render = (h, params) => {
-								let o = params.row
-								for (let i = 0, l = path.length; i < l; i++) {
-									if (o) o = o[path[i]]
-									else break
-								}
-								return h('span', o)
-							}
-						}
-					}
 					return d
 				})
 		},
 		parseFilterColumns(columns) {
-			return columns.map(col => {
-				const filter = col.filter
-				col = Object.assign({}, col)
-				if (filter === 'select') {
-					col.render = h =>
-						h('Select', {
-							props: {},
-							on: {
-								'on-change': val => doFilter('eq', val)
-							}
-						})
-				} else if (filter === 'input') {
-					col.render = h =>
-						h('Input', {
-							props: {
-								placeholder: col.title,
-								icon: 'ios-search-strong'
+			const typeFilters = {
+				string: (h, params) =>
+					h('Input', {
+						props: {
+							placeholder: params.column.title,
+							icon: 'ios-search',
+							value: getFilterValue(params)
+						},
+						on: {
+							input: val => {
+								updateFilter(params, 'like', val)
 							},
-							on: {
-								input: val => {
-									col.fvalue = val
-									if (!val) doFilter('like', val)
-								},
-								'on-click': () => doFilter('like', col.fvalue),
-								'on-enter': () => doFilter('like', col.fvalue)
+							'on-click': () => this.refresh(),
+							'on-enter': () => this.refresh()
+						}
+					}),
+				number: (h, params) =>
+					h('Input', {
+						props: {
+							placeholder: 'eg. 0 ~ 100',
+							icon: 'ios-search',
+							value: getFilterValue(params, v => (v.join && v.join(' ~ ')) || v)
+						},
+						on: {
+							input: val => {
+								val = val.split('~')
+								val[0] = Number.parseFloat(val[0])
+								val[0] = isFinite(val[0]) ? val[0] : null
+								if (val.length === 1) {
+									updateFilter(params, 'eq', val[0])
+								} else {
+									val.length = 2
+									val[1] = Number.parseFloat(val[1])
+									val[1] = isFinite(val[1]) ? val[1] : null
+									updateFilter(params, 'between', val)
+								}
+							},
+							'on-click': () => this.refresh(),
+							'on-enter': () => this.refresh()
+						}
+					}),
+				date: (h, params) =>
+					h('DatePicker', {
+						props: {
+							placeholder: params.column.title,
+							type: 'daterange',
+							value: getFilterValue(params),
+							placement: params.column.filterPlace || 'bottom-end',
+							'split-panels': true,
+							size: 'large'
+						},
+						style: { width: '100%' },
+						on: {
+							'on-change': val => {
+								var s = val[0] || null,
+									e = val[1] || null
+								if (s && e && s === e) {
+									e = moment(e, 'YYYY-MM-DD')
+										.add(1, 'day')
+										.format()
+								}
+								updateFilter(params, 'between', [s, e])
+								this.refresh()
 							}
-						})
+						}
+					})
+			}
+
+			function getFilterValue(params, f) {
+				const c = params.row[params.column.key]
+				if (c) {
+					let val = c.value
+					if (val !== undefined && val !== null) {
+						var op = c.op
+						if (/lt/.test(op)) {
+							val = [null, val]
+						} else if (/gt/.test(op)) {
+							val = [val, null]
+						}
+						return f ? f(val, op) : val
+					}
+				}
+			}
+
+			const updateFilter = (params, op, val) => {
+				const col = params.column,
+					key = col.key
+				if (Array.isArray(val)) {
+					if (val[0] === null && val[1] === null) {
+						op = 'eq'
+						val = null
+					} else if (val[0] === null) {
+						op = 'lte'
+						val = val[1]
+					} else if (val[1] === null) {
+						op = 'gte'
+						val = val[0]
+					} else {
+						if (val[0] > val[1]) {
+							const m = val[1]
+							val[1] = val[0]
+							val[0] = m
+						}
+						op = 'between'
+						val.length = 2
+					}
+				}
+				this.condition[key] = {
+					key,
+					op,
+					value: val === '' || val === null ? undefined : val
+				}
+			}
+
+			return columns.map(col => {
+				let filter = col.filter
+				col = Object.assign({}, col)
+				if (filter !== false) {
+					filter = typeof filter === 'string' ? filter : col.type || 'string'
+					col.render = typeFilters[filter]
+					if (!col.render) throw new Error(`Invalid Filter Type: ${filter}`)
+					col.filter = filter
 				} else {
 					col.render = () => {}
-				}
-				const doFilter = (op, value) => {
-					if (!value) {
-						delete this.condition[col.key]
-					} else {
-						this.condition[col.key] = { key: col.key, op: col.filterOp || op, value }
-					}
-					this.refresh()
 				}
 				return col
 			})

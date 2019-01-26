@@ -1,9 +1,11 @@
 const express = require('express'),
-	joi = require('joi'),
+	BaseJoi = require('joi'),
 	_ = require('lodash'),
 	chalk = require('chalk'),
 	models = require('../db/models'),
-	Sequelize = require('sequelize')
+	Sequelize = require('sequelize'),
+	Extension = require('joi-date-extensions'),
+	joi = BaseJoi.extend(Extension)
 const { plural } = require('../util/string')
 const { makeArray, makeMap, resolveOn, assignWithOut } = require('../util/util')
 const { notExist } = require('../util/err')
@@ -177,7 +179,23 @@ Object.assign(defAPI, {
 			joi.object({
 				key: joi.string().required(),
 				op: joi.string().required(),
-				value: joi.string().required()
+				value: joi
+					.alternatives()
+					.try(
+						joi
+							.array()
+							.items(
+								joi.date().format('YYYY-MM-DD'),
+								joi.date().format('YYYY-MM-DD HH:mm:ss'),
+								joi.string(),
+								joi.number()
+							),
+						joi.date().format('YYYY-MM-DD'),
+						joi.date().format('YYYY-MM-DD HH:mm:ss'),
+						joi.string(),
+						joi.number()
+					)
+					.required()
 			})
 		)
 	},

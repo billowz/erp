@@ -33,21 +33,23 @@
           label="折扣"
           prop="discount"
         >
-          <Input
+          <InputNumber
             v-model="editData.discount"
-            :number="true"
+            :min="6"
+            :max="10"
           >
-          <span slot="append">折</span></Input>
+            <span slot="append">折</span>
+          </InputNumber>
         </Form-item>
 
         <Form-item
           label="积分"
           prop="score"
         >
-          <Input
+          <InputNumber
             v-model="editData.score"
-            :number="true"
-          ></Input>
+            :min="0"
+          ></InputNumber>
         </Form-item>
 
         <Form-item
@@ -128,23 +130,27 @@ export default {
 				},
 				{
 					title: '会员卡号',
-					key: 'card'
-				},
-				{
-					title: '积分',
-					key: 'score'
+					key: 'card',
+					align: 'right'
 				},
 				{
 					title: '电话',
-					key: 'phone'
+					key: 'phone',
+					align: 'right'
+				},
+				{
+					title: '积分',
+					key: 'score',
+					type: 'number'
+				},
+				{
+					title: '折扣',
+					key: 'discount',
+					type: 'number'
 				},
 				{
 					title: '微信',
 					key: 'weixin'
-				},
-				{
-					title: '折扣',
-					key: 'discount'
 				}
 			]
 		}

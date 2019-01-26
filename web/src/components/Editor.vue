@@ -5,6 +5,9 @@
     :width="width"
     :loading="saving"
     :scrollable="true"
+    :fullscreen="false"
+    ok-text="保存"
+    cancel-text="返回"
     @on-ok="save()"
     @on-cancel="close(false)"
   >
@@ -15,7 +18,7 @@
 export default {
 	props: {
 		title: { type: String, required: true },
-		width: { type: Number, default: 500 },
+		width: { type: Number, default: 600 },
 		api: { type: String, required: true },
 		load: { type: Function },
 		data: { type: Object },
