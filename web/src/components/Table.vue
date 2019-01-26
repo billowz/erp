@@ -190,8 +190,8 @@ export default {
 				})
 				.then(res => {
 					const data = res.data.data
-					this.data = data.rows
 					this.totalRows = data.count
+					this.data = data.rows
 
 					console.log(
 						`loaded table[${this.title}] page: ${page}`,
@@ -201,6 +201,7 @@ export default {
 						'condition',
 						condition
 					)
+					// console.log(this.data.map(d => d.consumer.name).join(', '))
 				})
 				.finally(() => {
 					this.loading = false
@@ -326,6 +327,7 @@ export default {
 						sortable: false,
 						align: 'center',
 						render: (h, params) => {
+							// console.log(params.row.consumer.name)
 							if (params.row.id) return h('div', actions.map(a => a(h, params)))
 						}
 					}
@@ -352,11 +354,8 @@ export default {
 						}
 					}
 
-					d.sortable = d.sortable !== false
-					if (d.key === this.defaultSort.key) {
-						if (!d.sortable) throw new Error(`column ${d.key} is not sortable`)
-						d.sortType = this.defaultSort.order
-					}
+          d.sortable = d.sortable !== false
+          delete d.sortType
 					return d
 				})
 		},
@@ -485,6 +484,12 @@ export default {
 					col.filter = filter
 				} else {
 					col.render = () => {}
+				}
+
+				//col.sortable = col.sortable !== false
+				if (col.key === this.defaultSort.key) {
+					if (!col.sortable) throw new Error(`column ${col.key} is not sortable`)
+					col.sortType = this.defaultSort.order
 				}
 				return col
 			})
