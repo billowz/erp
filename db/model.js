@@ -38,7 +38,7 @@ function defModel(model, associate) {
 		return [models, associate]
 	}
 }
-defModel.oneToMany = (one, many, options = {}) => {
+defModel.oneToMany = (one, many, options = { onDelete: 'NO ACTION' }) => {
 	const [One, oneOpts] = parseRelModel(one, false, true)
 	const [Many, manyOpts] = parseRelModel(many, true)
 

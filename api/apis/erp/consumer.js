@@ -28,5 +28,5 @@ module.exports = defAPI('Consumer', [
 	),
 	defAPI.list({}, (query, { model }) => model.findAndCountAll(query)),
 	defAPI.info((id, { model }) => model.findById(id)),
-	defAPI.del((id, { model }) => model.destroy({ where: { id } }))
+	defAPI.del((id, { model }) => model.destroy({ where: { id } }), '客户')
 ])

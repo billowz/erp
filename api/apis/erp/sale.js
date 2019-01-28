@@ -122,12 +122,14 @@ module.exports = defAPI('SaleOrder', [
 			]
 		})
 	),
-	defAPI.del((id, { model, sequelize, models }) =>
-		sequelize.transaction(transaction =>
-			models.SaleOrderItem.destroy({
-				where: { fk_order: id },
-				transaction
-			}).then(() => model.destroy({ where: { id }, transaction }))
-		)
+	defAPI.del(
+		(id, { model, sequelize, models }) =>
+			sequelize.transaction(transaction =>
+				models.SaleOrderItem.destroy({
+					where: { fk_order: id },
+					transaction
+				}).then(() => model.destroy({ where: { id }, transaction }))
+			),
+		'销售单'
 	)
 ])

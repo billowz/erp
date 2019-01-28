@@ -271,7 +271,7 @@ Object.assign(defAPI, {
 			}
 		}
 	},
-	del(del) {
+	del(del, name) {
 		return [
 			{
 				path: 'delete:/:id',
@@ -282,7 +282,11 @@ Object.assign(defAPI, {
 						.required()
 				},
 				process([{ id }], ctx) {
-					return del([id], ctx)
+					return Promise.resolve(del([id], ctx)).catch(err => {
+						if (err.sql && err.name === 'SequelizeForeignKeyConstraintError') {
+							throw new Error(`${name} 正在被使用，不能删除！`)
+						}
+					})
 				}
 			},
 			{
@@ -300,7 +304,11 @@ Object.assign(defAPI, {
 						)
 				},
 				process([{ ids }], ctx) {
-					return del(ids, ctx)
+					return Promise.resolve(del(ids, ctx)).catch(err => {
+						if (err.sql && err.name === 'SequelizeForeignKeyConstraintError') {
+							throw new Error(`${name} 正在被使用，不能删除！`)
+						}
+					})
 				}
 			}
 		]

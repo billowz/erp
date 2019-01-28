@@ -45,5 +45,5 @@ module.exports = defAPI('Product', [
 			include: [{ model: models.ProductType, as: 'type' }]
 		})
 	),
-	defAPI.del((id, { model }) => model.destroy({ where: { id } }))
+	defAPI.del((id, { model }) => model.destroy({ where: { id } }), '商品')
 ])
