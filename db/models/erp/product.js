@@ -27,6 +27,10 @@ module.exports = defModel(
 				type: DataTypes.INTEGER.UNSIGNED,
 				defaultValue: 0
 			},
+			minStock: {
+				type: DataTypes.INTEGER.UNSIGNED,
+				defaultValue: 0
+			},
 			price: {
 				type: DataTypes.FLOAT.UNSIGNED,
 				allowNull: false

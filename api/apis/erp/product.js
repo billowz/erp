@@ -9,10 +9,11 @@ module.exports = defAPI('Product', [
 			code: joi.string(),
 			unit: joi.string(),
 			stock: joi.number().integer(),
-			price: joi.number().integer(),
-			purchasePrice: joi.number().integer(),
+			minStock: joi.number().integer(),
+			price: joi.number(),
+			purchasePrice: joi.number(),
 			fk_type: joi.string().uuid(),
-			createRequires: `name,stock,stock,price,purchasePrice,fk_type`
+			createRequires: `name,stock,minStock,price,purchasePrice,fk_type`
 		},
 		{
 			modelName: 'Product',

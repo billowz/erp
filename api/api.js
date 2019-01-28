@@ -1,9 +1,9 @@
 const express = require('express'),
-	BaseJoi = require('joi'),
 	_ = require('lodash'),
 	chalk = require('chalk'),
 	models = require('../db/models'),
 	Sequelize = require('sequelize'),
+	BaseJoi = require('joi'),
 	Extension = require('joi-date-extensions'),
 	joi = BaseJoi.extend(Extension)
 const { plural } = require('../util/string')
@@ -88,7 +88,10 @@ function defAPI(modelName, name, apis) {
 								Sequelize: models.Sequelize,
 								req,
 								res,
-								values
+								values,
+								toJSON() {
+									return undefined
+								}
 							})
 						})
 						.then(data => {
@@ -302,29 +305,29 @@ Object.assign(defAPI, {
 			}
 		]
 	},
-	checkID(Model, id, name) {
-		return Model.findById(id).then(m => resolveOn(m, m, notExist(name)))
-	},
-	getModelMap(Model, where) {
+	getModelMap(Model, where, transaction, lock) {
 		return Model.findAll({
-			where
+			where,
+			lock: lock ? transaction.LOCK.UPDATE : undefined,
+			transaction
 		}).then(coll => makeMap(coll, 'id'))
 	},
-	getModelMapByIds(Model, ids) {
-		return defAPI.getModelMap(Model, {
-			id: { [Sequelize.Op.in]: ids }
-		})
+	getModelMapByIds(Model, ids, transaction, lock) {
+		return defAPI.getModelMap(
+			Model,
+			{
+				id: { [Sequelize.Op.in]: ids }
+			},
+			transaction,
+			lock
+		)
 	},
-	getModelsByIds(Model, ids, name) {
-		return defAPI
-			.getModelMapByIds(Model, ids)
-			.then(map => Promise.resolve(ids.map(id => resolveOn(map[id], map[id], notExist(name)))))
-	},
-	delModelByIds(Model, ids) {
+	delModelByIds(Model, ids, transaction) {
 		return Model.destroy({
 			where: {
 				id: { [Sequelize.Op.in]: ids }
-			}
+			},
+			transaction
 		})
 	},
 	ruleSave(body, rule) {
@@ -366,6 +369,8 @@ class Model {
 					rparam = param[paramKey]
 
 				delete param[paramKey]
+
+				if (casecade) rule.lock = true
 
 				let rel
 				if (!many) {
@@ -412,7 +417,7 @@ class Model {
 				})(key)
 			})
 		}
-		ctx.context.addModel(this, param)
+		ctx.context.addModel(this, param, rule.lock)
 	}
 	__addManyRel(models, relation, rule, path) {
 		const rel = {
@@ -442,7 +447,17 @@ class Model {
 			})
 			return Promise.all(
 				this.caseCadeRels[1].map(rel => {
-					return model[rel.getter]().then(exists => {
+					return model[rel.getter]({
+						lock: rel.rule.lock ? this.ctx.transaction.LOCK.UPDATE : undefined,
+						transaction: this.ctx.transaction
+					}).then(exists => {
+						console.log(
+							chalk.green(
+								`loaded${rel.rule.lock ? '[locked]' : ''} exist relation[${rel.path.join(
+									'.'
+								)}]: ${exists.map(m => m.id).join(', ')}`
+							)
+						)
 						const map = rel.models.reduce((map, m) => (m.id && (map[m.id] = m), map), {})
 						return this.ctx.context.delModel(
 							rel.rule.modelName,
@@ -458,6 +473,7 @@ class Model {
 
 		this.caseCadeRels[0].map((fk, rule, rel) => {
 			if (rel) param[fk] = rel.model.id
+			else delete param[fk]
 		})
 
 		if (rule.saveParam) param = rule.saveParam(param, this, ctx) || param
@@ -485,7 +501,7 @@ class Model {
 	save() {
 		console.log(chalk.green(`save ${this.rule.modelName}: ${this.model.id}`))
 
-		return this.model.save()
+		return this.model.save({ transaction: this.ctx.transaction })
 	}
 	saveRels() {
 		return Promise.all(
@@ -495,7 +511,7 @@ class Model {
 	${this.model.id}: ${rel.models.map(m => m.model.id).join(', ')}`)
 				)
 
-				return this.model[rel.setter](rel.models.map(m => m.model))
+				return this.model[rel.setter](rel.models.map(m => m.model), { transaction: this.ctx.transaction })
 			})
 		)
 	}
@@ -507,27 +523,34 @@ class SaveContext {
 		this.loadPromises = []
 		this.saves = []
 		this.dels = {}
-		this.ctx = ctx
-		this.model = new Model(rule, id, param, Object.assign({ context: this }, ctx))
+		this.ctx = Object.assign({ context: this }, ctx)
+		rule.lock = true
+		this.model = new Model(rule, id, param, this.ctx)
 	}
 	save() {
 		const { saves, dels, ctx } = this
-		return this.load().then(() => {
-			saves.forEach(m => m.margeParam())
+		return ctx.sequelize.transaction(transaction => {
+			ctx.transaction = transaction
+			return this.load()
+				.then(() => {
+					saves.forEach(m => m.margeParam())
 
-			return ctx.sequelize.transaction(transaction =>
-				Promise.all(saves.map(m => m.beforeSave()))
-					.then(() =>
-						Promise.all(
-							_.map(dels, (ids, modelName) => {
-								console.log(chalk.green(`delete models[${modelName}]: ${ids.join(', ')}`))
+					return Promise.all(saves.map(m => m.beforeSave()))
+						.then(() =>
+							Promise.all(
+								_.map(dels, (ids, modelName) => {
+									console.log(chalk.green(`delete models[${modelName}]: ${ids.join(', ')}`))
 
-								return defAPI.delModelByIds(getModel(modelName, ctx), ids)
-							}).concat(saves.map(m => m.save()))
+									return defAPI.delModelByIds(getModel(modelName, ctx), ids, transaction)
+								}).concat(saves.map(m => m.save()))
+							)
 						)
-					)
-					.then(() => Promise.all(saves.map(m => m.saveRels())))
-			)
+						.then(() => Promise.all(saves.map(m => m.saveRels())))
+				})
+				.then(() => {
+					ctx.transaction = null
+					return ctx
+				})
 		})
 	}
 	delModel(modelName, ids) {
@@ -537,19 +560,21 @@ class SaveContext {
 			_ids.push.apply(_ids, ids)
 		}
 	}
-	addModel(model, save) {
-		this.addIdLoader(model.rule.modelName, model.id, model.onLoadModel, model)
+	addModel(model, save, lock) {
+		this.addIdLoader(model.rule.modelName, model.id, model.onLoadModel, model, lock)
 		if (save) {
 			this.saves.push(model)
 		}
 	}
-	addIdLoader(modelName, id, cb, scope) {
+	addIdLoader(modelName, id, cb, scope, lock) {
 		const { idLoaders } = this
 		if (id) {
 			// console.log(chalk.green(`add model loader[${modelName}]: ${id}`))
 
 			const idMap = idLoaders[modelName] || (idLoaders[modelName] = {}),
 				list = idMap[id] || (idMap[id] = [])
+
+			if (lock) idMap.lock = lock
 
 			list.push({ cb, scope })
 		} else {
@@ -564,16 +589,20 @@ class SaveContext {
 		const { ctx } = this
 		return Promise.all(
 			_.map(this.idLoaders, (idMap, modelName) => {
+				const lock = idMap.lock
+				delete idMap.lock
 				const ids = Object.keys(idMap)
 
 				// console.log(chalk.green(`query models[${modelName}]: ${ids.join(', ')}`))
 
 				return defAPI
-					.getModelMapByIds(getModel(modelName, ctx), ids)
+					.getModelMapByIds(getModel(modelName, ctx), ids, ctx.transaction, lock)
 					.then(modelMap => {
 						console.log(
 							chalk.green(
-								`loaded exist models[${modelName}]: ${ids.filter(id => modelMap[id]).join(', ')}`
+								`loaded${lock ? '[locked]' : ''} exist models[${modelName}]: ${ids
+									.filter(id => modelMap[id])
+									.join(', ')}`
 							)
 						)
 
@@ -590,7 +619,12 @@ class SaveContext {
 						return Promise.all(promises)
 					})
 					.catch(e => {
-						console.error(chalk.green(`query models[${modelName}] with error: ${ids.join(', ')}`), e)
+						console.error(
+							chalk.green(
+								`query${lock ? '[locked]' : ''} models[${modelName}] with error: ${ids.join(', ')}`
+							),
+							e
+						)
 						throw e
 					})
 			}).concat(this.loadPromises)

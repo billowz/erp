@@ -8,7 +8,7 @@
     @on-select="routeTo"
   >
     <div
-      v-for="(node, key, index) in siteMap"
+      v-for="(node, index) in siteMap"
       :key="index"
     >
       <Submenu
@@ -23,7 +23,7 @@
           <span style="font-size:1.5em;">{{node.name}}</span>
         </template>
         <Menu-item
-          v-for="(sub, key, index) in node.children"
+          v-for="(sub, index) in node.children"
           :name="sub.path"
           :key="index"
         >

@@ -2,7 +2,7 @@
   <div class="layout-breadcrumb">
     <Breadcrumb>
       <Breadcrumb-item
-        v-for="(itemName, key, index) in itemNames"
+        v-for="(itemName, index) in itemNames"
         :key="index"
       >{{ itemName }}</Breadcrumb-item>
     </Breadcrumb>

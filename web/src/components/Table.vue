@@ -84,7 +84,7 @@
       <div style="text-align:center; font-size:14px">
         <p>{{title}}：
           <span
-            v-for="(label,key,index) in deleteLabels"
+            v-for="(label,index) in deleteLabels"
             :key="index"
           >
             {{label}}
@@ -99,6 +99,8 @@
 
 <script>
 import Editor from '@/components/Editor'
+import _ from 'lodash'
+import moment from 'moment'
 
 export default {
 	props: {
@@ -411,7 +413,6 @@ export default {
 							'split-panels': true,
 							size: 'large'
 						},
-						style: { width: '100%' },
 						on: {
 							'on-change': val => {
 								var s = val[0] || null,

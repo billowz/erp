@@ -30,6 +30,13 @@
           <Input v-model="editData.card"></Input>
         </Form-item>
         <Form-item
+          label="生日"
+          prop="birthday"
+        >
+          <DatePicker v-model="editData.birthday"></DatePicker>
+        </Form-item>
+
+        <Form-item
           label="折扣"
           prop="discount"
         >
@@ -110,6 +117,7 @@ export default {
 					}
 				],
 				phone: [],
+				birthday: [],
 				weixin: [],
 				disableScore: [],
 				score: [
@@ -137,6 +145,12 @@ export default {
 					title: '电话',
 					key: 'phone',
 					align: 'right'
+				},
+				{
+					title: '生日',
+					key: 'birthday',
+					align: 'right',
+					type: 'date'
 				},
 				{
 					title: '积分',

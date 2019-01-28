@@ -14,6 +14,9 @@ module.exports = defModel(
 				type: DataTypes.FLOAT.UNSIGNED,
 				defaultValue: 10
 			},
+			birthday: {
+				type: DataTypes.DATE
+			},
 			score: {
 				type: DataTypes.FLOAT.UNSIGNED,
 				defaultValue: 0

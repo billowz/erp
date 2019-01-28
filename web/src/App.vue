@@ -14,21 +14,16 @@
       v-else
     >
       <Row>
-        <Col span="24">
+        <Col span="22">
         <side-menu :permissions="permissions"></side-menu>
         </Col>
+        <Col
+          span="2"
+          class="top-menu-section"
+        >
+        <top-menu></top-menu>
+        </Col>
       </Row>
-      <div class="layout-header">
-        <Row>
-          <Col span="23">&nbsp;</Col>
-          <Col
-            span="1"
-            class="top-menu-section"
-          >
-          <top-menu></top-menu>
-          </Col>
-        </Row>
-      </div>
 
       <navigator></navigator>
 
@@ -148,10 +143,6 @@ export default {
 	background: #fff;
 	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
-
-.top-menu-section {
-	padding-top: 15px;
-}
 </style>
 <style>
 ::-webkit-scrollbar-track {
@@ -187,5 +178,20 @@ fieldset[disabled] .ivu-input {
 }
 .ivu-input-number-input[disabled] {
 	color: #000;
+}
+.ivu-date-picker {
+	width: 100%;
+}
+.top-menu-section {
+	padding-top: 15px;
+	background: #2d8cf0;
+	color: #fff;
+	height: 60px;
+}
+.top-menu-section a {
+	color: #eee;
+}
+.top-menu-section a:hover {
+	color: #fff;
 }
 </style>

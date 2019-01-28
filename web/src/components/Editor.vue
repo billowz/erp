@@ -4,7 +4,7 @@
     :title="editorTitle"
     :width="width"
     :loading="saving"
-    :scrollable="true"
+    :scrollable="false"
     :fullscreen="false"
     ok-text="保存"
     cancel-text="返回"

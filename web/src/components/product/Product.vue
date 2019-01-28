@@ -33,7 +33,10 @@
           label="分类"
           prop="fk_type"
         >
-          <Select v-model="editData.fk_type">
+          <Select
+            v-model="editData.fk_type"
+            filterable
+          >
             <Option
               v-for="item in types"
               :value="item.id"
@@ -70,13 +73,16 @@
           </InputNumber>
         </Form-item>
         <Form-item
-          label="零售价"
-          prop="price"
+          label="库存告警"
+          prop="minStock"
         >
           <InputNumber
-            v-model="editData.price"
+            v-model="editData.minStock"
             :min="0"
-          ></InputNumber>
+            :precision="0"
+          >
+            <span slot="append">{{editData.unit}}</span>
+          </InputNumber>
         </Form-item>
         <Form-item
           label="进价"
@@ -84,6 +90,15 @@
         >
           <InputNumber
             v-model="editData.purchasePrice"
+            :min="0"
+          ></InputNumber>
+        </Form-item>
+        <Form-item
+          label="零售价"
+          prop="price"
+        >
+          <InputNumber
+            v-model="editData.price"
             :min="0"
           ></InputNumber>
         </Form-item>
@@ -121,6 +136,15 @@ export default {
 				unit: [{ required: true, message: `请选择${title}单位`, trigger: 'blur' }],
 				stock: [
 					{ required: true, type: 'integer', min: 0, message: `请输入${title}库存 (>=0)`, trigger: 'blur' }
+				],
+				minStock: [
+					{
+						required: true,
+						type: 'integer',
+						min: 0,
+						message: `请输入${title}库存告警 (>=0)`,
+						trigger: 'blur'
+					}
 				],
 				price: [
 					{
@@ -170,6 +194,32 @@ export default {
 					title: '库存',
 					key: 'stock',
 					type: 'number',
+					digits: 0,
+					align: 'right',
+					fmt(h, val, params) {
+						return [
+							h(
+								'div',
+								{
+									style:
+										val <= params.row.minStock
+											? {
+													color: 'red',
+													fontWeight: 'blod'
+											  }
+											: {
+													color: '#00c900'
+											  }
+								},
+								val
+							)
+						]
+					}
+				},
+				{
+					title: '库存告警',
+					key: 'minStock',
+					type: 'number',
 					digits: 0
 				},
 				{
@@ -216,7 +266,7 @@ export default {
 			})
 		},
 		onEdit(data) {
-			this.setEdit(Object.assign({ unit: '件' }, data))
+			this.setEdit(Object.assign({ unit: '件', stock: 1, minStock: 1, price: 0, purchasePrice: 0 }, data))
 		},
 		onEditEnd() {
 			this.setEdit()

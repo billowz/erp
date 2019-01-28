@@ -1,5 +1,7 @@
 const defAPI = require('../../api')
-const joi = require('joi')
+const BaseJoi = require('joi'),
+	Extension = require('joi-date-extensions'),
+	joi = BaseJoi.extend(Extension)
 
 module.exports = defAPI('Consumer', [
 	defAPI.save(
@@ -9,6 +11,7 @@ module.exports = defAPI('Consumer', [
 			card: joi.string(),
 			phone: joi.string(),
 			weixin: joi.string(),
+			birthday: joi.date().format('YYYY-MM-DD'),
 			discount: joi
 				.number()
 				.min(6)

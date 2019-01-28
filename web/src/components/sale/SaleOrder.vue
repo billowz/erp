@@ -26,6 +26,7 @@
           prop="consumer"
         >
           <Select
+            filterable
             v-model="editData.consumer"
             placeholder="请选择客户"
             @on-change="changeConsumer"
@@ -120,6 +121,7 @@
             prop="payType"
           >
             <Select
+              filterable
               v-model="editData.payType"
               filterable
             >
@@ -176,14 +178,15 @@
           </Col>
         </Row>
         <Row
-          v-for="(item,key,index) in editData.items"
+          v-for="(item,index) in editData.items"
           :key="index"
           style="margin-top:5px"
         >
           <Col span="1">
           <Icon
-            type="checkmark"
-            :style="'color:'+(item.product && item.count?'green':'#eee')"
+            type="md-checkmark-circle"
+            size="large"
+            :style="'font-size:15px; margin-top:12px; color:'+(item.product && item.count?'green':'#999')"
           ></Icon>
           </Col>
           <Col
@@ -191,6 +194,7 @@
             style="padding:0 5px;"
           >
           <Select
+            filterable
             v-model="item.product"
             placeholder="请选择商品"
             @on-change="changeProduct(item)"
@@ -199,7 +203,15 @@
               v-for="product in products"
               :value="product.id"
               :key="product.id"
-            >{{ product.name}} (￥{{product.price}})</Option>
+              :label="`${product.name} (#${product.stock}) (￥${product.price})`"
+              v-if="item.product === product.id || !selProducts[product.id]"
+            >
+              <Row style="color:#000;line-height: 100%;">
+                <Col span="16">{{ product.name}}</Col>
+                <Col span="4"># <span style="color:green;">{{product.stock}}</span></Col>
+                <Col span="4">￥ <span style="color:green;">{{product.price}}</span></Col>
+              </Row>
+            </Option>
           </Select>
           </Col>
 
@@ -222,7 +234,8 @@
           >
           <InputNumber
             v-model="item.count"
-            :min="1"
+            :min="0"
+            :max="Math.max(productMap[item.product] ? productMap[item.product].stock : 0, item.orgCount||0)"
             :precision="0"
             @on-change="updateItem(item)"
           >
@@ -274,6 +287,7 @@ export default {
 			consumerMap: {},
 			products: [],
 			productMap: {},
+			selProducts: {},
 			editRule: {
 				consumer: [{ required: true, message: `请选择客户`, trigger: 'blur' }],
 				discount: [
@@ -445,28 +459,36 @@ export default {
 			this.editData.items.push({
 				product: undefined,
 				price: 0,
-				count: 1,
+				count: 0,
 				totalPrice: 0
 			})
 		},
 		removeItem(index) {
 			this.editData.items.splice(index, 1)
+			this.updateSelProducts()
 			this.updatePrice()
 		},
 		changeProduct(item) {
 			const product = this.productMap[item.product]
 			if (product) {
 				item.price = product.price
+				item.count = Math.min(product.stock, item.count)
 				this.updateItem(item)
 			} else {
 				item.product = undefined
 			}
+			this.updateSelProducts()
 		},
 		updateItem(item) {
-			item.price = Math.max(item.price, 0)
-			item.count = item.count < 0 || !isFinite(item.count) ? 1 : item.count
 			item.totalPrice = item.product ? money(item.price * item.count) : 0
 			this.updatePrice()
+		},
+		updateSelProducts() {
+			this.selProducts = this.editData.items.reduce(
+				(map, item) => (item.product && (map[item.product] = true), map),
+				{}
+			)
+			console.log(this.selProducts)
 		},
 		onEdit(data) {
 			this.setEdit(
@@ -476,15 +498,18 @@ export default {
 						? data.items.map(item =>
 								Object.assign({}, item, {
 									product: item.fk_product,
-									totalPrice: money(item.price * item.count)
+									totalPrice: money(item.price * item.count),
+									orgCount: item.count
 								})
 						  )
 						: []
 				})
-			)
+      )
+      this.updateSelProducts()
 			!this.editData.id && this.addItem()
 		},
 		editorLoad(data) {
+			this.loadRels()
 			this.onEdit(data)
 		},
 		onSave(data) {
@@ -494,7 +519,7 @@ export default {
 						const data = this.editData
 						const items = data.items
 							.filter(item => item.product && item.count)
-							.map(item => ({ product: item.product, count: item.count, price: item.price }))
+							.map(item => ({ id: item.id, product: item.product, count: item.count, price: item.price }))
 						items.length
 							? resolve(
 									Object.assign(

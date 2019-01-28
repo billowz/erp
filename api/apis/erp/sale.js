@@ -43,6 +43,7 @@ module.exports = defAPI('SaleOrder', [
 			name: '销售单',
 			rels: {
 				consumer: {
+					lock: true,
 					modelName: 'Consumer',
 					fk: 'fk_consumer',
 					name: '客户'
@@ -55,13 +56,32 @@ module.exports = defAPI('SaleOrder', [
 					casecade: true,
 					rels: {
 						product: {
+							lock: true,
 							modelName: 'Product',
 							fk: 'fk_product',
 							name: '商品'
 						}
 					},
+					saveParam(param, desc, ctx) {
+						let stock = null
+						const product = desc.getProduct().model,
+							item = desc.model
+
+						param.purchasePrice = product.purchasePrice
+
+						if (!desc.id) {
+							stock = product.stock - param.count
+						} else if (param.count && param.count !== item.count) {
+							stock = product.stock - (param.count - item.count)
+						}
+						if (stock !== null) {
+							if (stock < 0) throw new Error(`商品 [${product.name}] 库存不足！`)
+							product.stock = stock
+						}
+					},
 					save(model, desc, ctx) {
-						model.purchasePrice = desc.getProduct().model.purchasePrice
+						const product = desc.getProduct().model
+						return product.save({ transaction: ctx.transaction })
 					}
 				}
 			},
@@ -73,7 +93,8 @@ module.exports = defAPI('SaleOrder', [
 			},
 			create(model, desc, ctx) {
 				const consumer = desc.getConsumer().model
-				if (!consumer.disableScore) return consumer.update({ score: model.score })
+				if (!consumer.disableScore)
+					return consumer.update({ score: model.score }, { transaction: ctx.transaction })
 				else model.score = 0
 			}
 		}
@@ -104,8 +125,9 @@ module.exports = defAPI('SaleOrder', [
 	defAPI.del((id, { model, sequelize, models }) =>
 		sequelize.transaction(transaction =>
 			models.SaleOrderItem.destroy({
-				where: { fk_order: id }
-			}).then(() => model.destroy({ where: { id } }))
+				where: { fk_order: id },
+				transaction
+			}).then(() => model.destroy({ where: { id }, transaction }))
 		)
 	)
 ])

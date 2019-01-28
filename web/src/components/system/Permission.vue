@@ -105,6 +105,8 @@
 </template>
 
 <script>
+import _ from 'lodash'
+import moment from 'moment'
 const defaultPermissions = ['dashboard', 'admin', 'admin:user', 'admin:role', 'admin:permission']
 export default {
 	data() {

@@ -6,13 +6,10 @@
     >
       <a href="javascript:void(0)">
         <Icon
-          type="person"
-          size="15"
+          type="md-contact"
+          size="30"
         ></Icon>
-        <Icon
-          type="arrow-down-b"
-          size="15"
-        ></Icon>
+        {{this.$store.state.user ? this.$store.state.user.userInfo.username:''}}
       </a>
       <Dropdown-menu slot="list">
         <Dropdown-item name="password">修改密码</Dropdown-item>
@@ -21,7 +18,7 @@
     </Dropdown>
 
     <Modal
-      width="400"
+      width="600"
       v-model="passwordModal"
       title="修改密码"
       :loading="pwdUpdating"
@@ -33,7 +30,7 @@
         ref="dataModel"
         :model="dataModel"
         :rules="rules"
-        :label-width="100"
+        :label-width="120"
       >
         <Form-item
           label="原密码"
@@ -140,4 +137,10 @@ export default {
 </script>
 
 <style scoped>
+.top-menu a {
+	display: block;
+	width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>
