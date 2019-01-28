@@ -6,7 +6,7 @@ const BaseJoi = require('joi'),
 module.exports = defAPI('Consumer', [
 	defAPI.save(
 		{
-			name: joi.string().min(3),
+			name: joi.string().min(2),
 			comment: joi.string(),
 			card: joi.string(),
 			phone: joi.string(),
