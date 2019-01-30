@@ -109,7 +109,7 @@ export default {
 			editRule: {
 				name: [
 					{ required: true, message: `${title}名称不能为空`, trigger: 'blur' },
-					{ type: 'string', min: 3, message: `${title}名称不能少于3位`, trigger: 'blur' }
+					{ type: 'string', min: 2, message: `${title}名称不能少于2位`, trigger: 'blur' }
 				],
 				card: [],
 				discount: [
