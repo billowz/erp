@@ -211,11 +211,11 @@ export default {
 		},
 
 		refresh() {
-      let page = this.currentPage || 1
-      if(this.condition !== this.orgCondition){
-        page = 1
-        this.orgCondition = this.condition
-      }
+			let page = this.currentPage || 1
+			if (this.condition !== this.orgCondition) {
+				page = 1
+				this.orgCondition = this.condition
+			}
 			this.setPage(page)
 		},
 
@@ -361,8 +361,8 @@ export default {
 						}
 					}
 
-          d.sortable = d.sortable !== false
-          delete d.sortType
+					d.sortable = d.sortable !== false
+					delete d.sortType
 					return d
 				})
 		},
@@ -473,11 +473,13 @@ export default {
 						val.length = 2
 					}
 				}
-				this.condition[key] = {
-					key,
-					op,
-					value: val === '' || val === null ? undefined : val
-				}
+				this.condition = Object.assign({}, this.condition, {
+					[key]: {
+						key,
+						op,
+						value: val === '' || val === null ? undefined : val
+					}
+				})
 			}
 
 			return columns.map(col => {
