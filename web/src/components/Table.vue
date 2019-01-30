@@ -156,7 +156,7 @@ export default {
 	},
 
 	created() {
-		this.setPage(1)
+		this.refresh()
 	},
 
 	methods: {
@@ -211,7 +211,12 @@ export default {
 		},
 
 		refresh() {
-			this.setPage(this.currentPage || 1)
+      let page = this.currentPage || 1
+      if(this.condition !== this.orgCondition){
+        page = 1
+        this.orgCondition = this.condition
+      }
+			this.setPage(page)
 		},
 
 		doSort({ key, order }) {
