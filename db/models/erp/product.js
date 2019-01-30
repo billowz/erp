@@ -31,7 +31,7 @@ module.exports = defModel(
 				type: DataTypes.INTEGER.UNSIGNED,
 				defaultValue: 0
 			},
-			price: {
+			unitPrice: {
 				type: DataTypes.FLOAT.UNSIGNED,
 				allowNull: false
 			},

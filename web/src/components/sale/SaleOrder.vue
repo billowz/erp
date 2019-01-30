@@ -29,41 +29,45 @@
             filterable
             v-model="editData.consumer"
             placeholder="请选择客户"
-            @on-change="changeConsumer"
+            @on-change="onChangeConsumer"
             :disabled="!!editData.id"
           >
             <Option
               v-for="item in consumers"
               :value="item.id"
               :key="item.id"
-            >{{ item.name +(item.phone ? ' (' + item.phone + ')' : '')}}</Option>
+              :label="item.name +(item.phone ? ' (' + item.phone + ')' : '')"
+            >
+              <Row>
+                <Col span="11">
+                {{item.name}}
+                </Col>
+                <Col
+                  span="11"
+                  style="text-align:right;"
+                >
+                {{item.phone}}
+                </Col>
+              </Row>
+            </Option>
           </Select>
         </Form-item>
 
-        <Row>
+        <Row v-if="editOrderConsumer">
           <Col span="11">
           <Form-item
-            label="折扣"
-            prop="discount"
+            label="会员卡"
+            prop="consumerCard"
           >
-            <InputNumber
-              v-model="editData.discount"
-              :min="0"
-              :step="0.1"
-              @on-change="updateDiscount"
-            >
-              <span slot="append">折</span>
-            </InputNumber>
+            {{editOrderConsumer.card}}
           </Form-item>
           </Col>
           <Col span="11">
-          <Form-item label="折扣价">
-            <InputNumber
-              disabled
-              :value="calcPayPrice()"
-            >
-              <span slot="prepend">￥</span>
-            </InputNumber>
+          <Form-item
+            label="会员折扣"
+            prop="consumerDiscount"
+          >
+            {{editOrderConsumer.discount }} 折
           </Form-item>
           </Col>
         </Row>
@@ -71,11 +75,11 @@
         <Row>
           <Col span="11">
           <Form-item
-            label="总金额"
-            prop="price"
+            label="总价"
+            prop="totalPrice"
           >
             <InputNumber
-              v-model="editData.price"
+              v-model="editData.totalPrice"
               disabled
             >
               <span slot="prepend">￥</span></InputNumber>
@@ -89,7 +93,7 @@
             <InputNumber
               v-model="editData.discountPrice"
               :min="0"
-              @on-change="updateDiscount"
+              @on-change="change(editData,'discountPrice', updatePay)"
               :disabled="!!editData.id"
             >
               <span slot="prepend">￥</span>
@@ -107,7 +111,7 @@
             <InputNumber
               v-model="editData.pay"
               :min="0"
-              @on-change="updatePay"
+              @on-change="change(editData,'pay', onChangePay)"
             >
               <span slot="prepend">￥</span>
               <span slot="append">{{editData.payType}}</span>
@@ -128,32 +132,40 @@
               <Option value="现金">现金</Option>
               <Option value="微信">微信</Option>
               <Option value="支付宝">支付宝</Option>
+              <Option value="银行卡">银行卡</Option>
             </Select>
           </Form-item>
           </Col>
         </Row>
 
-        <Form-item
-          label="积分"
-          prop="score"
-        >
-          <InputNumber
-            v-model="editData.score"
-            :min="0"
-            :disabled="!!editData.id"
+        <Row v-if="editOrderConsumer && !editOrderConsumer.disableScore">
+          <Col span="11">
+          <Form-item
+            label="积分"
+            prop="score"
           >
-          </InputNumber>
-        </Form-item>
-        <!--
-        <Form-item
-          label="优惠说明"
-          prop="discountComment"
-        >
-          <Input
-            v-model="editData.discountComment"
-            type="textarea"
-          ></Input>
-        </Form-item> -->
+            <InputNumber
+              v-model="editData.score"
+              :min="0"
+              :precision="0"
+              @on-change="change(editData,'score')"
+            >
+            </InputNumber>
+          </Form-item>
+          </Col>
+          <Col span="11">
+          <Form-item
+            label="当前积分"
+            prop="currScore"
+          >
+            <span style="color:green;">{{ editOrderConsumer.score }}</span>
+            <span v-if="editData.score != editData.orgScore">
+              <span style="color:green;">{{ editData.score > editData.orgScore?'+':'-' }}</span>
+              <span style="color:red;">{{ Math.abs(editData.score - editData.orgScore) }}</span>
+            </span>
+          </Form-item>
+          </Col>
+        </Row>
 
         <Form-item
           label="备注"
@@ -177,22 +189,36 @@
           ></Button>
           </Col>
         </Row>
+        <Row>
+          <Col span="7">
+          商品
+          </Col>
+          <Col span="3">
+          单价
+          </Col>
+          <Col span="3">
+          数量
+          </Col>
+          <Col span="3">
+          折扣
+          </Col>
+          <Col span="3">
+          优惠
+          </Col>
+          <Col span="3">
+          总价
+          </Col>
+          <Col span="2">
+
+          </Col>
+        </Row>
         <Row
           v-for="(item,index) in editData.items"
           :key="index"
           style="margin-top:5px"
+          :style="{color: item.product && item.count?'green':'#999'}"
         >
-          <Col span="1">
-          <Icon
-            type="md-checkmark-circle"
-            size="large"
-            :style="'font-size:15px; margin-top:12px; color:'+(item.product && item.count?'green':'#999')"
-          ></Icon>
-          </Col>
-          <Col
-            span="8"
-            style="padding:0 5px;"
-          >
+          <Col span="7">
           <Select
             filterable
             v-model="item.product"
@@ -203,53 +229,65 @@
               v-for="product in products"
               :value="product.id"
               :key="product.id"
-              :label="`${product.name} (#${product.stock}) (￥${product.price})`"
+              :label="`${product.name} (#${product.stock}) (￥${product.unitPrice})`"
               v-if="item.product === product.id || !selProducts[product.id]"
             >
               <Row style="color:#000;line-height: 100%;">
                 <Col span="16">{{ product.name}}</Col>
                 <Col span="4"># <span style="color:green;">{{product.stock}}</span></Col>
-                <Col span="4">￥ <span style="color:green;">{{product.price}}</span></Col>
+                <Col span="4">￥ <span style="color:green;">{{product.unitPrice}}</span></Col>
               </Row>
             </Option>
           </Select>
           </Col>
 
-          <Col
-            span="4"
-            style="padding-right:5px;"
-          >
+          <Col span="3">
           <InputNumber
-            v-model="item.price"
+            v-model="item.unitPrice"
             :min="0"
-            @on-change="updateItem(item)"
+            @on-change="change(item, 'unitPrice')"
           >
             <span slot="prepend">￥</span>
           </InputNumber>
           </Col>
 
-          <Col
-            span="4"
-            style="padding-right:5px;"
-          >
+          <Col span="3">
           <InputNumber
             v-model="item.count"
             :min="0"
             :max="Math.max(productMap[item.product] ? productMap[item.product].stock : 0, item.orgCount||0)"
             :precision="0"
-            @on-change="updateItem(item)"
+            @on-change="change(item, 'count', onChangeItemPrice)"
           >
             <span slot="prepend">#</span>
           </InputNumber>
           </Col>
 
-          <Col
-            span="5"
-            style="padding-right:5px;"
-          >
+          <Col span="3">
           <InputNumber
-            disabled
+            v-model="item.discount"
+            :min="0"
+            :max="10"
+            :step="0.1"
+            @on-change="change(item, 'discount', onChangeItemPrice)"
+          >
+            <span slot="prepend">折</span>
+          </InputNumber>
+          </Col>
+          <Col span="3">
+          <InputNumber
+            v-model="item.discountPrice"
+            :min="0"
+            @on-change="change(item, 'discountPrice', updateItemTotalPrice)"
+          >
+            <span slot="prepend">￥</span>
+          </InputNumber>
+          </Col>
+          <Col span="3">
+          <InputNumber
             v-model="item.totalPrice"
+            :min="0"
+            @on-change="change(item, 'totalPrice', onChangeItemTotalPrice)"
           >
             <span slot="prepend">￥</span>
           </InputNumber>
@@ -290,26 +328,6 @@ export default {
 			selProducts: {},
 			editRule: {
 				consumer: [{ required: true, message: `请选择客户`, trigger: 'blur' }],
-				discount: [
-					{
-						required: true,
-						type: 'number',
-						min: 6,
-						max: 10,
-						message: `商品折扣: 6 折 ~ 10 折`,
-						trigger: 'blur'
-					}
-				],
-				discountPrice: [
-					{
-						required: true,
-						type: 'number',
-						min: 0,
-						message: `请输入优惠金额`,
-						trigger: 'blur'
-					}
-				],
-				discountComment: [],
 				comment: [],
 				score: [
 					{
@@ -317,15 +335,6 @@ export default {
 						type: 'number',
 						min: 0,
 						message: `请输入积分`,
-						trigger: 'blur'
-					}
-				],
-				price: [
-					{
-						required: true,
-						type: 'number',
-						min: 0,
-						message: `金额异常`,
 						trigger: 'blur'
 					}
 				],
@@ -339,6 +348,7 @@ export default {
 					}
 				],
 				payType: [{ required: true, message: `请选择支付方式`, trigger: 'blur' }],
+				discountComment: [],
 				items: []
 			},
 			tableHeader: [
@@ -357,13 +367,12 @@ export default {
 					align: 'right'
 				},
 				{
-					title: '总金额',
-					key: 'price',
-					type: 'number'
+					title: '原价',
+					key: 'orgTotalPrice'
 				},
 				{
-					title: '积分',
-					key: 'score',
+					title: '总价',
+					key: 'totalPrice',
 					type: 'number'
 				},
 				{
@@ -372,8 +381,13 @@ export default {
 					type: 'number'
 				},
 				{
-					title: '优惠金额',
-					key: 'discountPrice',
+					title: '优惠总金额',
+					key: 'totalDiscountPrice',
+					type: 'number'
+				},
+				{
+					title: '积分',
+					key: 'score',
 					type: 'number'
 				},
 				{
@@ -381,8 +395,8 @@ export default {
 					key: 'payType'
 				},
 				{
-					title: '折扣',
-					key: 'discount',
+					title: '利润',
+					key: 'profit',
 					type: 'number'
 				}
 			]
@@ -391,12 +405,146 @@ export default {
 	computed: {
 		itemSize() {
 			return (this.editData.items || []).filter(item => item.product && item.count).length
+		},
+		editOrderConsumer() {
+			const id = this.editData.consumer
+			return id && this.consumerMap[id]
 		}
 	},
 	created() {
 		this.loadRels()
 	},
 	methods: {
+		onEdit(data) {
+			this.setEdit(
+				Object.assign(
+					{
+						totalPrice: 0,
+						pay: 0,
+						score: 0,
+						discountPrice: 0,
+						payType: '现金',
+						changed: !!data.id || {}
+					},
+					data,
+					{
+						orgScore: data.score || 0,
+						consumer: data.fk_consumer,
+						items: data.items
+							? data.items.map(item =>
+									Object.assign({}, item, {
+										product: item.fk_product,
+										orgCount: item.count,
+										changed: !!item.id || {}
+									})
+							  )
+							: []
+					}
+				)
+			)
+			this.updateSelProducts()
+			!this.editData.id && this.addItem()
+		},
+		change(data, name) {
+			if (data.changed !== true) data.changed[name] = true
+			for (var i = 2; i < arguments.length; i++) arguments[i].call(this, data)
+		},
+		isChanged(data, name) {
+			return data.changed === true || data.changed[name]
+		},
+		setUnchanged(data, name, value, cb) {
+			if (!this.isChanged(data, name)) {
+				if (typeof value === 'function') value.call(this, data)
+				else data[name] = value
+			} else {
+				cb && cb.call(this, data)
+			}
+		},
+		addChange(data, name) {
+			data.changed[name] = true
+		},
+		onChangeConsumer() {
+			const data = this.editData
+			const consumer = this.editOrderConsumer
+			consumer &&
+				data.items.forEach(item => {
+					this.onChangeItemPrice(item)
+					this.setUnchanged(item, 'discount', () => {
+						item.discount = consumer.discount
+						this.onChangeItemPrice(item)
+					})
+				})
+		},
+		onChangeTotalPrice() {
+			const data = this.editData
+
+			data.orgTotalPrice = money(
+				data.items.reduce((total, item) => total + (item.product ? item.orgTotalPrice * item.count : 0), 0)
+			)
+			data.totalPrice = money(data.items.reduce((total, item) => total + (item.product ? item.totalPrice : 0), 0))
+
+			this.setUnchanged(data, 'pay', this.updatePay, this.onChangePay)
+		},
+		updatePay() {
+			const data = this.editData
+			data.pay = Math.max(money(data.totalPrice - data.discountPrice), 0)
+			this.onChangePay()
+		},
+		onChangePay() {
+			const data = this.editData
+			data.discountPrice = Math.max(money(data.totalPrice - data.pay), 0)
+			this.setUnchanged(data, 'score', data.pay)
+		},
+		addItem() {
+			const consumer = this.editOrderConsumer
+			this.editData.items.push({
+				orgUnitPrice: 0,
+				count: 0,
+				unitPrice: 0,
+				discount: consumer ? consumer.discount : 10,
+				discountPrice: 0,
+				totalPrice: 0,
+				changed: {}
+			})
+		},
+		removeItem(index) {
+			this.editData.items.splice(index, 1)
+			this.updateSelProducts()
+			this.onChangeTotalPrice()
+		},
+		changeProduct(item) {
+			const product = this.productMap[item.product]
+			item.orgUnitPrice = product.unitPrice
+			item.count = Math.min(product.stock, item.count || 1)
+			this.setUnchanged(item, 'unitPrice', product.unitPrice)
+
+			this.onChangeItemPrice(item)
+
+			this.updateSelProducts()
+		},
+		itemTotalPrice(item) {
+			return item.unitPrice * item.count * (item.discount / 10)
+		},
+		updateItemTotalPrice(item) {
+			item.totalPrice = Math.max(money(this.itemTotalPrice(item) - item.discountPrice), 0)
+			this.onChangeItemTotalPrice(item)
+		},
+		updateItemDiscountPrice(item) {
+			item.discountPrice = Math.max(money(this.itemTotalPrice(item) - item.totalPrice), 0)
+		},
+		onChangeItemTotalPrice(item) {
+			this.updateItemDiscountPrice(item)
+			this.onChangeTotalPrice()
+		},
+		onChangeItemPrice(item) {
+			this.setUnchanged(item, 'totalPrice', this.updateItemTotalPrice, this.updateItemDiscountPrice)
+		},
+		updateSelProducts() {
+			this.selProducts = this.editData.items.reduce(
+				(map, item) => (item.product && (map[item.product] = true), map),
+				{}
+			)
+		},
 		loadRels() {
 			this.$http
 				.get('consumers', {
@@ -419,95 +567,6 @@ export default {
 					this.productMap = this.products.reduce((map, c) => ((map[c.id] = c), map), {})
 				})
 		},
-		changeConsumer() {
-			const consumer = this.consumerMap[this.editData.consumer]
-			if (consumer) {
-				const data = this.editData
-				data.discount = consumer.discount
-				this.updateDiscount()
-				if (!data.id) data.score = consumer.disableScore ? 0 : data.price
-			}
-		},
-		updatePay() {
-			const data = this.editData
-
-			data.discountPrice = Math.max(money(this.calcPayPrice() - data.pay), 0)
-		},
-		updateDiscount() {
-			const data = this.editData
-
-			if (data.id) {
-				this.updatePay()
-			} else {
-				data.pay = Math.max(money(this.calcPayPrice() - data.discountPrice), 0)
-			}
-		},
-		updatePrice() {
-			const data = this.editData
-
-			data.price = money(
-				data.items.reduce((total, item) => (item.product ? total + item.price * item.count : total), 0)
-			)
-			this.updateDiscount()
-			if (!data.id && data.consumer && !data.consumer.disableScore) data.score = data.price
-		},
-		calcPayPrice() {
-			const data = this.editData
-			return money(data.price * (data.discount / 10))
-		},
-		addItem() {
-			this.editData.items.push({
-				product: undefined,
-				price: 0,
-				count: 0,
-				totalPrice: 0
-			})
-		},
-		removeItem(index) {
-			this.editData.items.splice(index, 1)
-			this.updateSelProducts()
-			this.updatePrice()
-		},
-		changeProduct(item) {
-			const product = this.productMap[item.product]
-			if (product) {
-				item.price = product.price
-				item.count = Math.min(product.stock, item.count)
-				this.updateItem(item)
-			} else {
-				item.product = undefined
-			}
-			this.updateSelProducts()
-		},
-		updateItem(item) {
-			item.totalPrice = item.product ? money(item.price * item.count) : 0
-			this.updatePrice()
-		},
-		updateSelProducts() {
-			this.selProducts = this.editData.items.reduce(
-				(map, item) => (item.product && (map[item.product] = true), map),
-				{}
-			)
-			console.log(this.selProducts)
-		},
-		onEdit(data) {
-			this.setEdit(
-				Object.assign({ price: 0, pay: 0, discount: 10, score: 0, discountPrice: 0, payType: '现金' }, data, {
-					consumer: data.fk_consumer,
-					items: data.items
-						? data.items.map(item =>
-								Object.assign({}, item, {
-									product: item.fk_product,
-									totalPrice: money(item.price * item.count),
-									orgCount: item.count
-								})
-						  )
-						: []
-				})
-      )
-      this.updateSelProducts()
-			!this.editData.id && this.addItem()
-		},
 		editorLoad(data) {
 			this.loadRels()
 			this.onEdit(data)
@@ -519,15 +578,20 @@ export default {
 						const data = this.editData
 						const items = data.items
 							.filter(item => item.product && item.count)
-							.map(item => ({ id: item.id, product: item.product, count: item.count, price: item.price }))
+							.map(item => ({
+								id: item.id,
+								product: item.product,
+								count: item.count,
+								discount: item.discount,
+								unitPrice: item.unitPrice,
+								totalPrice: item.totalPrice
+							}))
 						items.length
 							? resolve(
 									Object.assign(
 										Object.keys(this.editRule).reduce(
 											(obj, key) => (
-												key !== 'price' &&
-													(obj[key] = data[key] === null ? undefined : data[key]),
-												obj
+												(obj[key] = data[key] === null ? undefined : data[key]), obj
 											),
 											{ id: data.id }
 										),

@@ -1,17 +1,15 @@
 const defAPI = require('../../api')
 const joi = require('joi')
 
+function round(v) {
+	return Math.round(v * 100) / 100
+}
 module.exports = defAPI('SaleOrder', [
 	defAPI.ruleSave(
 		{
-			discount: joi
-				.number()
-				.min(6)
-				.max(10),
-			discountPrice: joi.number().min(0),
-			discountComment: joi.string(),
 			pay: joi.number().min(0),
 			score: joi.number(),
+			discountComment: joi.string(),
 			payType: joi.string(),
 			consumer: joi.string().uuid(),
 			items: joi
@@ -20,23 +18,32 @@ module.exports = defAPI('SaleOrder', [
 				.items(
 					joi.object({
 						id: joi.string().uuid(),
+						product: joi
+							.string()
+							.uuid()
+							.required(),
 						count: joi
 							.number()
 							.integer()
 							.min(1)
 							.required(),
-						price: joi
+						unitPrice: joi
 							.number()
 							.min(0)
 							.required(),
-						product: joi
-							.string()
-							.uuid()
+						totalPrice: joi
+							.number()
+							.min(0)
+							.required(),
+						discount: joi
+							.number()
+							.min(0)
+							.max(10)
 							.required()
 					})
 				),
 			comment: joi.string(),
-			createRequires: 'discount,discountPrice,pay,score,payType,consumer,items'
+			createRequires: 'pay,score,payType,consumer,items'
 		},
 		{
 			modelName: 'SaleOrder',
@@ -67,51 +74,99 @@ module.exports = defAPI('SaleOrder', [
 						const product = desc.getProduct().model,
 							item = desc.model
 
-						param.purchasePrice = product.purchasePrice
-
 						if (!desc.id) {
-							stock = product.stock - param.count
-						} else if (param.count && param.count !== item.count) {
-							stock = product.stock - (param.count - item.count)
+							param.purchasePrice = product.purchasePrice
+							param.orgUnitPrice = product.unitPrice
+							stock = param.count
+						} else if (param.count) {
+							stock = param.count - item.count
 						}
-						if (stock !== null) {
-							if (stock < 0) throw new Error(`商品 [${product.name}] 库存不足！`)
-							product.stock = stock
+						if (stock) {
+							product.stock -= stock
+							if (product.stock < 0) throw new Error(`商品 [${product.name}] 库存不足！`)
 						}
 					},
 					save(model, desc, ctx) {
 						const product = desc.getProduct().model
+
+						model.discountPrice = round(
+							Math.max(model.unitPrice * model.count * (model.discount / 10) - model.totalPrice, 0)
+						)
+
 						return product.save({ transaction: ctx.transaction })
 					}
 				}
 			},
-			save(model, desc, ctx) {
-				model.price =
-					Math.round(
-						desc.getItems().reduce((sum, item) => sum + item.model.count * item.model.price, 0) * 100
-					) / 100
-			},
-			create(model, desc, ctx) {
+
+			saveParam(param, desc, ctx) {
 				const consumer = desc.getConsumer().model
-				if (!consumer.disableScore)
-					return consumer.update({ score: model.score }, { transaction: ctx.transaction })
-				else model.score = 0
+
+				let score = null
+				if (consumer.disableScore) {
+					param.score = 0
+				} else if (!desc.id) {
+					score = param.score
+				} else if (param.score >= 0) {
+					score = param.score - desc.model.score
+				}
+				if (score) {
+					consumer.score = Math.max(consumer.score + score, 0)
+				}
+			},
+
+			save(model, desc, ctx) {
+				const consumer = desc.getConsumer().model,
+					items = desc.getItems()
+
+				model.totalPrice = round(items.reduce((sum, item) => sum + item.model.totalPrice, 0))
+				model.orgTotalPrice = round(
+					items.reduce((sum, item) => sum + item.model.orgUnitPrice * item.model.count, 0)
+				)
+				model.totalPurchasePrice = round(
+					items.reduce((sum, item) => sum + item.model.purchasePrice * item.model.count, 0)
+				)
+				model.discountPrice = round(Math.max(model.totalPrice - model.pay, 0))
+				model.totalDiscountPrice = Math.max(round(model.orgTotalPrice - model.pay), 0)
+				model.profit = round(model.pay - model.totalPurchasePrice)
+				if (!consumer.disableScore) {
+					return consumer.save({ transaction: ctx.transaction })
+				}
 			}
 		}
 	),
-	defAPI.list({}, (query, { model, models }) =>
-		model.findAndCountAll(
-			Object.assign(
-				{
-					include: [
-						//{ model: models.SaleOrderItem, as: 'items' },
-						{ model: models.Consumer, as: 'consumer' },
-						{ model: models.User, as: 'user' }
-					]
-				},
-				query
+	defAPI.list({}, (query, { model, models, sequelize }) =>
+		Promise.all([
+			model.findAndCountAll(
+				Object.assign(
+					{
+						include: [
+							//{ model: models.SaleOrderItem, as: 'items' },
+							{ model: models.Consumer, as: 'consumer' },
+							{ model: models.User, as: 'user' }
+						]
+					},
+					query
+				)
+			),
+			model.findAll(
+				Object.assign(
+					{
+						attributes: [
+							[sequelize.fn('SUM', sequelize.col('pay')), 'pay'],
+							[sequelize.fn('SUM', sequelize.col('profit')), 'profit']
+						],
+						include: [
+							//{ model: models.SaleOrderItem, as: 'items' },
+							{ attributes: [], model: models.Consumer, as: 'consumer' },
+							{ attributes: [], model: models.User, as: 'user' }
+						]
+					},
+					query
+				)
 			)
-		)
+		]).then(([records, summary]) => {
+			return { count: records.count, rows: records.rows.concat(summary) }
+		})
 	),
 	defAPI.info((id, { model, models }) =>
 		model.findById(id, {

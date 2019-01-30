@@ -33,7 +33,11 @@
           label="生日"
           prop="birthday"
         >
-          <DatePicker v-model="editData.birthday"></DatePicker>
+          <DatePicker
+            v-model="editData.birthday"
+            :start-date="birthdayStart"
+            type="date"
+          ></DatePicker>
         </Form-item>
 
         <Form-item
@@ -93,11 +97,13 @@
 </template>
 <script>
 import Table from '@/components/Table'
+import moment from 'moment'
 const title = '客户'
 export default {
 	data() {
 		return {
 			title,
+			birthdayStart: moment('1980-01-01').toDate(),
 			edit: null,
 			editData: {},
 			editRule: {
@@ -179,9 +185,12 @@ export default {
 					const data = this.editData
 					rs
 						? resolve(
-								Object.keys(this.editRule).reduce(
-									(obj, key) => ((obj[key] = data[key] === null ? undefined : data[key]), obj),
-									{ id: data.id }
+								Object.assign(
+									Object.keys(this.editRule).reduce(
+										(obj, key) => ((obj[key] = data[key] === null ? undefined : data[key]), obj),
+										{ id: data.id }
+									),
+									{ birthday: data.birthday && moment(data.birthday).format('YYYY-MM-DD') }
 								)
 						  )
 						: reject()

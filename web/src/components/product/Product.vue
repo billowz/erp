@@ -95,10 +95,10 @@
         </Form-item>
         <Form-item
           label="零售价"
-          prop="price"
+          prop="unitPrice"
         >
           <InputNumber
-            v-model="editData.price"
+            v-model="editData.unitPrice"
             :min="0"
           ></InputNumber>
         </Form-item>
@@ -146,7 +146,7 @@ export default {
 						trigger: 'blur'
 					}
 				],
-				price: [
+				unitPrice: [
 					{
 						required: true,
 						type: 'number',
@@ -165,7 +165,7 @@ export default {
 					},
 					{
 						validator: (rule, value, callback) => {
-							value > this.editData.price ? callback(new Error('进价 > 零售价')) : callback()
+							value > this.editData.unitPrice ? callback(new Error('进价 > 零售价')) : callback()
 						},
 						trigger: 'blur'
 					}
@@ -224,7 +224,7 @@ export default {
 				},
 				{
 					title: '零售价',
-					key: 'price',
+					key: 'unitPrice',
 					type: 'number'
 				},
 				{
@@ -266,7 +266,7 @@ export default {
 			})
 		},
 		onEdit(data) {
-			this.setEdit(Object.assign({ unit: '件', stock: 1, minStock: 1, price: 0, purchasePrice: 0 }, data))
+			this.setEdit(Object.assign({ unit: '件', stock: 1, minStock: 1, unitPrice: 0, purchasePrice: 0 }, data))
 		},
 		onEditEnd() {
 			this.setEdit()

@@ -8,21 +8,30 @@ module.exports = defModel(
 				type: DataTypes.FLOAT.UNSIGNED,
 				defaultValue: 0
 			},
-			price: {
-				// 订单总价
+			totalPrice: {
 				type: DataTypes.FLOAT.UNSIGNED,
 				allowNull: false
 			},
-			discount: {
-				// 折扣
+			orgTotalPrice: {
 				type: DataTypes.FLOAT.UNSIGNED,
-				defaultValue: 0,
+				allowNull: false
+			},
+			totalPurchasePrice: {
+				type: DataTypes.FLOAT.UNSIGNED,
+				allowNull: false
+			},
+			totalDiscountPrice: {
+				type: DataTypes.FLOAT.UNSIGNED,
 				allowNull: false
 			},
 			discountPrice: {
 				// 优惠金额
 				type: DataTypes.FLOAT.UNSIGNED,
 				defaultValue: 0,
+				allowNull: false
+			},
+			profit: {
+				type: DataTypes.FLOAT,
 				allowNull: false
 			},
 			discountComment: DataTypes.STRING,
@@ -41,7 +50,27 @@ module.exports = defModel(
 				type: DataTypes.INTEGER.UNSIGNED,
 				allowNull: false
 			},
-			price: {
+			discount: {
+				// 折扣
+				type: DataTypes.FLOAT.UNSIGNED,
+				defaultValue: 10,
+				allowNull: false
+			},
+			discountPrice: {
+				// 优惠金额
+				type: DataTypes.FLOAT.UNSIGNED,
+				defaultValue: 0,
+				allowNull: false
+			},
+			totalPrice: {
+				type: DataTypes.FLOAT.UNSIGNED,
+				allowNull: false
+			},
+			unitPrice: {
+				type: DataTypes.FLOAT.UNSIGNED,
+				allowNull: false
+			},
+			orgUnitPrice: {
 				type: DataTypes.FLOAT.UNSIGNED,
 				allowNull: false
 			},
